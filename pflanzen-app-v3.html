@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌿 Pflanzenfinder – Mein Kräuterbuch</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg: #f4efe4;
+  --bg2: #ece5d2;
+  --green-dark: #2d5016;
+  --green-mid: #4a7c2f;
+  --green-light: #7aab52;
+  --green-pale: #d4e8c2;
+  --earth: #8b6914;
+  --earth-light: #c4a35a;
+  --cream: #faf7ee;
+  --text: #1e2d0e;
+  --text-muted: #5a6e3a;
+  --accent: #c45c1a;
+  --red: #c0392b;
+  --shadow: rgba(45,80,22,0.15);
+  --radius: 14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse at 5% 15%,rgba(122,171,82,.07) 0%,transparent 55%),
+  radial-gradient(ellipse at 95% 85%,rgba(196,163,90,.09) 0%,transparent 55%);}
+
+/* ── HEADER ── */
+header{background:linear-gradient(135deg,var(--green-dark) 0%,var(--green-mid) 65%,var(--green-light) 100%);
+  padding:16px 24px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 20px var(--shadow);position:sticky;top:0;z-index:200;}
+header h1{font-family:'Playfair Display',serif;color:#fff;font-size:1.65rem;display:flex;align-items:center;gap:10px;}
+header h1 small{font-style:italic;font-weight:400;opacity:.8;font-size:1rem;}
+.header-actions{display:flex;gap:8px;}
+
+/* ── NAV ── */
+nav{display:flex;gap:4px;background:var(--bg2);padding:10px 18px;border-bottom:2px solid var(--green-pale);overflow-x:auto;flex-wrap:wrap;}
+nav button{padding:7px 16px;border:2px solid transparent;border-radius:22px;background:transparent;
+  color:var(--text-muted);font-family:'Lato',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:all .2s;letter-spacing:.4px;}
+nav button.active,nav button:hover{background:var(--green-mid);color:#fff;border-color:var(--green-dark);}
+
+/* ── MAIN ── */
+main{padding:18px;max-width:1300px;margin:0 auto;}
+.section{display:none;animation:fadeIn .3s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 20px;border-radius:26px;border:none;font-family:'Lato',sans-serif;font-weight:700;
+  font-size:.9rem;cursor:pointer;transition:all .2s;letter-spacing:.4px;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--green-mid);color:#fff;}
+.btn-primary:hover{background:var(--green-dark);transform:translateY(-1px);}
+.btn-secondary{background:transparent;color:var(--green-mid);border:2px solid var(--green-mid);}
+.btn-secondary:hover{background:var(--green-pale);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-sm{padding:5px 13px;font-size:.8rem;}
+.btn-icon{padding:6px 10px;border-radius:8px;font-size:.85rem;}
+.btn-earth{background:var(--earth-light);color:#fff;}
+.btn-earth:hover{background:var(--earth);}
+
+/* ── CARDS GRID ── */
+.plants-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;margin-top:16px;}
+.plant-card{background:var(--cream);border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 4px 14px var(--shadow);border:1px solid rgba(122,171,82,.2);
+  transition:transform .2s,box-shadow .2s;cursor:pointer;}
+.plant-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px var(--shadow);}
+.plant-card-img{width:100%;height:150px;display:flex;align-items:center;justify-content:center;
+  font-size:3.5rem;background:linear-gradient(135deg,var(--green-pale),var(--bg2));position:relative;overflow:hidden;}
+.plant-card-img img{width:100%;height:100%;object-fit:cover;}
+.cat-ribbon{position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:12px;
+  font-size:.72rem;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);}
+.plant-card-body{padding:14px;}
+.plant-card-body h3{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--green-dark);margin-bottom:3px;}
+.plant-card-body .latin{font-style:italic;color:var(--text-muted);font-size:.8rem;margin-bottom:8px;}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.tag{font-size:.7rem;padding:2px 9px;border-radius:16px;font-weight:700;}
+.tag-season{background:#fff3cd;color:#856404;}
+.tag-use{background:var(--green-pale);color:var(--green-dark);}
+.tag-loc{background:#fde8d8;color:var(--accent);}
+.tag-cat{color:#fff;font-size:.7rem;padding:2px 9px;border-radius:16px;font-weight:700;}
+.loc-count{font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+
+/* ── FORM ── */
+.form-card{background:var(--cream);border-radius:20px;padding:28px;box-shadow:0 4px 20px var(--shadow);
+  border:1px solid rgba(122,171,82,.2);max-width:760px;}
+.form-card h2{font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:22px;font-size:1.45rem;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-weight:700;color:var(--text-muted);font-size:.82rem;
+  margin-bottom:5px;text-transform:uppercase;letter-spacing:.7px;}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:9px 13px;
+  border:2px solid var(--green-pale);border-radius:9px;font-family:'Lato',sans-serif;
+  font-size:.93rem;background:#fff;color:var(--text);transition:border-color .2s;outline:none;}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--green-mid);}
+.form-group textarea{min-height:75px;resize:vertical;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:500px){.form-row{grid-template-columns:1fr;}}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+
+/* ── CATEGORY SELECT ── */
+.cat-select-wrap{display:flex;gap:8px;align-items:center;}
+.cat-select-wrap select{flex:1;}
+.cat-add-input{display:flex;gap:6px;margin-top:6px;}
+.cat-add-input input{flex:1;padding:7px 12px;border:2px solid var(--green-pale);border-radius:8px;
+  font-family:'Lato',sans-serif;font-size:.9rem;outline:none;}
+.cat-add-input input:focus{border-color:var(--green-mid);}
+
+/* ── STAGE CHECKBOXES ── */
+.stage-badges-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.stage-label{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.88rem;font-weight:normal;text-transform:none;letter-spacing:0;}
+.stage-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;}
+.stage-jungpflanze{background:#d4f5d4;color:#1a6b1a;}
+.stage-halbwuchs{background:#fff3cd;color:#856404;}
+.stage-altpflanze{background:#fde8d8;color:#8b3800;}
+.stage-saatgut{background:#e8d4f5;color:#5a1a6b;}
+
+/* ── GPS BUTTON ── */
+.gps-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
+  background:var(--earth-light);color:#fff;border:none;border-radius:8px;cursor:pointer;
+  font-size:.83rem;font-weight:700;margin-top:5px;}
+.gps-btn:hover{background:var(--earth);}
+
+/* ── LOCATIONS LIST in form ── */
+.locations-editor{background:#f0f7e8;border-radius:10px;padding:14px;margin-top:8px;}
+.location-item{display:flex;align-items:center;gap:8px;padding:8px;background:#fff;
+  border-radius:8px;margin-bottom:8px;border:1px solid var(--green-pale);}
+.location-item .loc-coords{flex:1;font-size:.82rem;color:var(--text-muted);}
+.location-item .loc-name{font-weight:700;font-size:.9rem;}
+.add-loc-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:8px;}
+@media(max-width:500px){.add-loc-form{grid-template-columns:1fr;}}
+.add-loc-form input{padding:8px 12px;border:2px solid var(--green-pale);border-radius:8px;
+  font-family:'Lato',sans-serif;font-size:.88rem;outline:none;}
+.add-loc-form input:focus{border-color:var(--green-mid);}
+
+/* ── CALENDAR ── */
+.cal-wrap{overflow-x:auto;border-radius:var(--radius);box-shadow:0 4px 16px var(--shadow);}
+.cal-table{width:100%;border-collapse:collapse;min-width:800px;background:var(--cream);}
+.cal-table thead tr th{background:var(--green-dark);color:#fff;padding:10px 8px;font-size:.78rem;
+  font-weight:700;letter-spacing:.5px;text-align:left;}
+.cal-table thead tr th:first-child{min-width:160px;}
+.cal-table thead tr th.month-th{min-width:52px;text-align:center;}
+.cal-table tbody tr{cursor:pointer;transition:background .15s;}
+.cal-table tbody tr:hover td{background:rgba(212,232,194,.35)!important;}
+.cal-table tbody tr:nth-child(even) td{background:rgba(244,239,228,.7);}
+.cal-table tbody tr td{padding:9px 8px;border-bottom:1px solid rgba(122,171,82,.15);vertical-align:middle;}
+.plant-name-cell{font-weight:700;font-size:.9rem;color:var(--green-dark);display:flex;align-items:center;gap:6px;}
+.plant-latin-cell{font-size:.75rem;font-style:italic;color:var(--text-muted);}
+.stage-cell{text-align:center;}
+.month-cell{padding:6px 4px!important;text-align:center;}
+.month-bar-wrap{height:20px;border-radius:10px;overflow:hidden;background:#e8e0d0;min-width:40px;margin:0 2px;}
+.month-bar-fill{height:100%;border-radius:10px;transition:width .4s;}
+
+/* ── MAP ── */
+#mapContainer{height:480px;border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 4px 20px var(--shadow);border:2px solid var(--green-pale);}
+.map-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.cat-filter-btn{padding:6px 14px;border-radius:20px;border:2px solid;font-size:.82rem;font-weight:700;
+  cursor:pointer;transition:all .2s;font-family:'Lato',sans-serif;}
+.cat-filter-btn.active{color:#fff;border-color:transparent;}
+.cat-filter-btn:not(.active){background:transparent;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(30,45,14,.6);z-index:1000;
+  backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;animation:fadeIn .2s ease;}
+.modal{background:var(--cream);border-radius:20px;max-width:680px;width:100%;
+  max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.modal-header{background:linear-gradient(135deg,var(--green-dark),var(--green-mid));padding:22px 28px;
+  color:#fff;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:flex-start;}
+.modal-header h2{font-family:'Playfair Display',serif;font-size:1.5rem;}
+.modal-header .latin{font-style:italic;opacity:.8;font-size:.88rem;margin-top:3px;}
+.modal-close{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;opacity:.8;line-height:1;}
+.modal-close:hover{opacity:1;}
+.modal-body{padding:22px 28px;}
+.modal-section{margin-bottom:20px;}
+.modal-section h4{font-family:'Playfair Display',serif;color:var(--green-dark);font-size:.98rem;
+  margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--green-pale);display:flex;align-items:center;gap:7px;}
+.modal-section p,.modal-section ul{font-size:.88rem;line-height:1.7;color:var(--text);}
+.recipe-card{background:#fff;border-radius:10px;padding:13px;margin-bottom:10px;
+  border-left:4px solid var(--green-light);box-shadow:0 2px 7px var(--shadow);}
+.recipe-card h5{color:var(--green-dark);font-size:.92rem;margin-bottom:5px;}
+.recipe-card p{font-size:.83rem;color:var(--text-muted);line-height:1.6;}
+
+/* locations in modal */
+.loc-list-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;
+  border-radius:9px;margin-bottom:7px;border:1px solid var(--green-pale);}
+.loc-list-item .loc-info{flex:1;}
+.loc-list-item .loc-title{font-weight:700;font-size:.9rem;}
+.loc-list-item .loc-coord{font-size:.78rem;color:var(--text-muted);}
+
+/* ── SEARCH BAR ── */
+.search-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.search-bar input{flex:1;min-width:180px;padding:9px 16px;border:2px solid var(--green-pale);
+  border-radius:22px;font-family:'Lato',sans-serif;font-size:.92rem;outline:none;}
+.search-bar input:focus{border-color:var(--green-mid);}
+.search-bar select{padding:9px 14px;border:2px solid var(--green-pale);border-radius:22px;
+  font-family:'Lato',sans-serif;font-size:.88rem;outline:none;background:#fff;}
+
+/* ── PHOTO ── */
+.photo-preview{width:100%;height:140px;background:var(--green-pale);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:2.3rem;
+  position:relative;overflow:hidden;cursor:pointer;border:2px dashed var(--green-light);transition:background .2s;}
+.photo-preview:hover{background:#c8e0b0;}
+.photo-preview img{width:100%;height:100%;object-fit:cover;}
+
+/* ── REZEPTE ── */
+.recipe-section-plant{margin-bottom:24px;}
+.recipe-section-plant h3{font-family:'Playfair Display',serif;color:var(--green-dark);font-size:1.15rem;margin-bottom:10px;}
+
+/* ── EXPORT ── */
+.export-section{background:linear-gradient(135deg,var(--green-dark),#1a3a08);color:#fff;
+  border-radius:var(--radius);padding:22px;margin-top:16px;}
+.export-section h3{font-family:'Playfair Display',serif;margin-bottom:8px;font-size:1.15rem;}
+.export-section p{font-size:.86rem;opacity:.85;margin-bottom:13px;line-height:1.6;}
+
+/* ── STATS ── */
+.stat-box{background:var(--cream);padding:14px;border-radius:10px;text-align:center;
+  box-shadow:0 2px 8px var(--shadow);}
+.stat-box .num{font-size:2rem;font-weight:700;font-family:'Playfair Display',serif;}
+.stat-box .lbl{font-size:.8rem;color:var(--text-muted);margin-top:3px;}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:55px 20px;color:var(--text-muted);}
+.empty-state .icon{font-size:3.5rem;margin-bottom:14px;}
+.empty-state h3{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--green-dark);margin-bottom:7px;}
+
+/* ── NOTIFICATION ── */
+.notification{position:fixed;bottom:20px;right:20px;background:var(--green-dark);color:#fff;
+  padding:11px 18px;border-radius:11px;font-size:.88rem;z-index:9999;display:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);animation:slideIn .3s ease;}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── EDIT MODAL TABS ── */
+.etabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid var(--green-pale);padding-bottom:0;}
+.etab{padding:7px 16px;border:none;border-bottom:3px solid transparent;background:none;
+  font-family:'Lato',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;color:var(--text-muted);
+  margin-bottom:-2px;}
+.etab.active{color:var(--green-dark);border-bottom-color:var(--green-mid);}
+.etab-panel{display:none;}
+.etab-panel.active{display:block;}
+
+/* ── DB MODAL ── */
+.db-search-bar{display:flex;gap:8px;margin-bottom:14px;}
+.db-search-bar input{flex:1;padding:9px 14px;border:2px solid var(--green-pale);border-radius:22px;
+  font-family:'Lato',sans-serif;font-size:.92rem;outline:none;}
+.db-search-bar input:focus{border-color:var(--green-mid);}
+.db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;
+  max-height:55vh;overflow-y:auto;padding:2px;}
+.db-card{background:#fff;border-radius:10px;padding:12px;border:2px solid var(--green-pale);
+  cursor:pointer;transition:all .2s;text-align:center;}
+.db-card:hover{border-color:var(--green-mid);background:var(--green-pale);transform:translateY(-2px);}
+.db-card .db-emoji{font-size:2rem;margin-bottom:6px;}
+.db-card .db-name{font-weight:700;font-size:.9rem;color:var(--green-dark);}
+.db-card .db-latin{font-style:italic;font-size:.75rem;color:var(--text-muted);}
+.db-card .db-cat{font-size:.7rem;padding:2px 8px;border-radius:10px;color:#fff;
+  display:inline-block;margin-top:5px;font-weight:700;}
+
+/* ── PHOTO EDIT ── */
+.photo-edit-wrap{position:relative;width:100%;height:140px;border-radius:10px;overflow:hidden;
+  border:2px dashed var(--green-light);background:var(--green-pale);display:flex;
+  align-items:center;justify-content:center;font-size:2rem;cursor:pointer;transition:background .2s;}
+.photo-edit-wrap:hover{background:#c8e0b0;}
+.photo-edit-wrap img{width:100%;height:100%;object-fit:cover;}
+.photo-edit-btn{position:absolute;bottom:8px;right:8px;background:rgba(45,80,22,.7);color:#fff;
+  border:none;border-radius:8px;padding:5px 10px;font-size:.78rem;font-weight:700;cursor:pointer;}
+.photo-edit-del{position:absolute;bottom:8px;left:8px;background:rgba(192,57,43,.8);color:#fff;
+  border:none;border-radius:8px;padding:5px 10px;font-size:.78rem;font-weight:700;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌿 Pflanzenfinder <small>Mein Kräuterbuch</small></h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary" style="color:#fff;border-color:rgba(255,255,255,.5);font-size:.83rem;" onclick="openDBModal()">📚 Datenbank</button>
+    <button class="btn btn-secondary" style="color:#fff;border-color:rgba(255,255,255,.5);font-size:.83rem;" onclick="openAddModal()">+ Neu</button>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('uebersicht')">🌱 Übersicht</button>
+  <button onclick="showSection('kalender')">📅 Kalender</button>
+  <button onclick="showSection('karte')">🗺️ Karte</button>
+  <button onclick="showSection('rezepte')">🍵 Rezepte</button>
+  <button onclick="showSection('export')">💾 Export</button>
+</nav>
+
+<main>
+
+<!-- ══════════ ÜBERSICHT ══════════ -->
+<div class="section active" id="section-uebersicht">
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="🔍 Pflanze suchen..." oninput="renderPlants()">
+    <select id="filterCat" onchange="renderPlants()">
+      <option value="">Alle Kategorien</option>
+    </select>
+    <select id="filterUse" onchange="renderPlants()">
+      <option value="">Alle Verwendungen</option>
+      <option value="Tee">Tee</option>
+      <option value="Salat">Salat</option>
+      <option value="Medizin">Medizin</option>
+      <option value="Kochen">Kochen</option>
+      <option value="Tinkturen">Tinkturen</option>
+    </select>
+  </div>
+  <div class="plants-grid" id="plantsGrid"></div>
+</div>
+
+<!-- ══════════ KALENDER ══════════ -->
+<div class="section" id="section-kalender">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);font-size:1.45rem;">📅 Ernte- & Fundkalender</h2>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <select id="calFilterCat" onchange="renderCalendar()" style="padding:7px 12px;border:2px solid var(--green-pale);border-radius:22px;font-family:'Lato',sans-serif;outline:none;background:#fff;font-size:.88rem;">
+        <option value="">Alle Kategorien</option>
+      </select>
+    </div>
+  </div>
+  <div class="cal-wrap">
+    <table class="cal-table" id="calTable">
+      <thead><tr>
+        <th>Pflanze</th>
+        <th>Kategorie</th>
+        <th>Stadium</th>
+        <th class="month-th">Jan</th><th class="month-th">Feb</th><th class="month-th">Mär</th>
+        <th class="month-th">Apr</th><th class="month-th">Mai</th><th class="month-th">Jun</th>
+        <th class="month-th">Jul</th><th class="month-th">Aug</th><th class="month-th">Sep</th>
+        <th class="month-th">Okt</th><th class="month-th">Nov</th><th class="month-th">Dez</th>
+      </tr></thead>
+      <tbody id="calBody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;">
+    <span style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);">
+      <span style="display:inline-block;width:28px;height:14px;border-radius:7px;background:var(--green-mid)"></span> Haupterntezeit
+    </span>
+    <span style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);">
+      <span style="display:inline-block;width:28px;height:14px;border-radius:7px;background:var(--earth-light)"></span> Nebenzeit (±1 Monat)
+    </span>
+    <span style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);">
+      <span style="display:inline-block;width:28px;height:14px;border-radius:7px;background:#e8e0d0"></span> Nicht verfügbar
+    </span>
+  </div>
+</div>
+
+<!-- ══════════ KARTE ══════════ -->
+<div class="section" id="section-karte">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+    <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);font-size:1.45rem;">🗺️ Fundort-Karte</h2>
+  </div>
+  <div class="map-controls" id="mapCatFilters">
+    <span style="font-size:.85rem;font-weight:700;color:var(--text-muted);">Filter:</span>
+    <button class="cat-filter-btn active" data-cat="ALL" onclick="toggleMapCat(this)" style="border-color:var(--green-mid);color:var(--green-mid);">Alle</button>
+  </div>
+  <div id="mapContainer"></div>
+  <p style="margin-top:10px;font-size:.8rem;color:var(--text-muted);">Klicke auf einen Marker für Details. Nur Pflanzen mit GPS-Koordinaten werden angezeigt.</p>
+</div>
+
+<!-- ══════════ REZEPTE ══════════ -->
+<div class="section" id="section-rezepte">
+  <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:18px;font-size:1.45rem;">🍵 Rezepte & Verwendung</h2>
+  <div id="rezepteList"></div>
+</div>
+
+<!-- ══════════ EXPORT ══════════ -->
+<div class="section" id="section-export">
+  <h2 style="font-family:'Playfair Display',serif;color:var(--green-dark);margin-bottom:18px;font-size:1.45rem;">💾 Export & Statistiken</h2>
+  <div class="export-section">
+    <h3>🌍 Google Earth Export (KML)</h3>
+    <p>Alle Fundorte als KML-Datei – direkt in Google Earth oder Google Maps importierbar.</p>
+    <button class="btn" style="background:#fff;color:var(--green-dark);font-weight:700;" onclick="exportKML()">⬇️ KML herunterladen</button>
+  </div>
+  <div class="form-card" style="margin-top:18px;">
+    <h2>📋 Datensicherung</h2>
+    <p style="color:var(--text-muted);margin-bottom:14px;font-size:.88rem;">Exportiere oder importiere alle Pflanzendaten als JSON-Datei.</p>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="exportJSON()">💾 JSON exportieren</button>
+      <label class="btn btn-secondary" style="cursor:pointer;">📂 JSON importieren<input type="file" accept=".json" onchange="importJSON(this)" style="display:none;"></label>
+    </div>
+  </div>
+  <div class="form-card" style="margin-top:18px;">
+    <h2>📊 Statistiken</h2>
+    <div id="statsDiv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:13px;margin-top:12px;"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- ══════════ DETAIL / EDIT MODAL ══════════ -->
+<div class="modal-overlay" id="detailOverlay" onclick="closeOnBg(event,'detailOverlay')">
+<div class="modal" id="detailModal">
+  <div class="modal-header">
+    <div>
+      <h2 id="dm_name"></h2>
+      <div class="latin" id="dm_latin"></div>
+    </div>
+    <button class="modal-close" onclick="closeModal('detailOverlay')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="etabs">
+      <button class="etab active" onclick="switchEtab(0)">📋 Info</button>
+      <button class="etab" onclick="switchEtab(1)">📍 Standorte</button>
+      <button class="etab" onclick="switchEtab(2)">✏️ Bearbeiten</button>
+    </div>
+    <!-- INFO TAB -->
+    <div class="etab-panel active" id="etab0">
+      <div id="dm_info"></div>
+    </div>
+    <!-- STANDORTE TAB -->
+    <div class="etab-panel" id="etab1">
+      <div id="dm_locs"></div>
+    </div>
+    <!-- EDIT TAB -->
+    <div class="etab-panel" id="etab2">
+      <div id="dm_edit"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addOverlay" onclick="closeOnBg(event,'addOverlay')">
+<div class="modal">
+  <div class="modal-header">
+    <div><h2>🌱 Neue Pflanze</h2></div>
+    <button class="modal-close" onclick="closeModal('addOverlay')">✕</button>
+  </div>
+  <div class="modal-body" id="addModalBody">
+    <!-- filled by buildAddForm() -->
+  </div>
+</div>
+</div>
+
+<!-- DB MODAL -->
+<div class="modal-overlay" id="dbOverlay" onclick="closeOnBg(event,'dbOverlay')">
+<div class="modal" style="max-width:760px;">
+  <div class="modal-header">
+    <div><h2>📚 Pflanzendatenbank</h2><div class="latin">Pflanze auswählen und automatisch eintragen</div></div>
+    <button class="modal-close" onclick="closeModal('dbOverlay')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="db-search-bar">
+      <input type="text" id="dbSearch" placeholder="🔍 Pflanze suchen..." oninput="renderDB()">
+      <select id="dbCatFilter" onchange="renderDB()" style="padding:9px 13px;border:2px solid var(--green-pale);border-radius:22px;font-family:'Lato',sans-serif;outline:none;background:#fff;font-size:.88rem;">
+        <option value="">Alle Kategorien</option>
+        <option value="Kräuter">Kräuter</option>
+        <option value="Wildpflanzen">Wildpflanzen</option>
+        <option value="Beeren">Beeren</option>
+        <option value="Obst">Obst</option>
+        <option value="Heilpflanzen">Heilpflanzen</option>
+        <option value="Pilze">Pilze</option>
+        <option value="Bäume">Bäume</option>
+      </select>
+    </div>
+    <div class="db-grid" id="dbGrid"></div>
+  </div>
+</div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const STORAGE_KEY = 'pflanzenfinder_v3';
+let plants = [];
+let categories = ['Kräuter','Wildpflanzen','Beeren','Obst','Pilze','Heilpflanzen','Gemüse','Bäume'];
+let currentDetailId = null;
+let leafletMap = null;
+let mapMarkers = [];
+let activeCatFilters = new Set(['ALL']);
+
+const CAT_COLORS = {
+  'Kräuter':'#4a7c2f','Wildpflanzen':'#7aab52','Beeren':'#b03060','Obst':'#e07020',
+  'Pilze':'#8b4513','Heilpflanzen':'#2e86ab','Gemüse':'#5a9e40','Bäume':'#6b4423',
+};
+function catColor(c){ return CAT_COLORS[c] || '#666'; }
+
+function load(){
+  try{ const d=localStorage.getItem(STORAGE_KEY); if(d){const p=JSON.parse(d);plants=p.plants||[];categories=p.categories||categories;} }catch(e){}
+  if(!plants.length) addSampleData();
+}
+function save(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({plants,categories}));
+}
+
+function addSampleData(){
+  plants=[
+    {id:1,name:'Brennnessel',latin:'Urtica dioica',emoji:'🌿',category:'Wildpflanzen',
+     stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:8,
+     uses:['Tee','Salat','Medizin'],
+     desc:'Bevorzugt stickstoffreiche Böden. Junge Triebe im Frühling ernten.',
+     photo:null,
+     locations:[{id:1,name:'Waldrand am Bach',lat:52.520,lng:13.405},{id:2,name:'Gartenzaun Nord',lat:52.522,lng:13.408}],
+     recipes:[{title:'Brennnessel-Tee',desc:'2 EL Blätter, 250ml heißes Wasser, 10 Min. ziehen lassen.'},{title:'Brennnessel-Suppe',desc:'200g Triebe, 1 Zwiebel, 500ml Brühe. Pürieren, würzen.'}]},
+    {id:2,name:'Schafgarbe',latin:'Achillea millefolium',emoji:'🌼',category:'Heilpflanzen',
+     stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:9,
+     uses:['Tee','Medizin'],
+     desc:'Sonnige Magerwiesen. Blutstillend.',
+     photo:null,
+     locations:[{id:1,name:'Magerwiese Südfeld',lat:48.135,lng:11.582}],
+     recipes:[{title:'Wundtinktur',desc:'50g Blüten in 250ml Korn, 4 Wochen ziehen lassen.'}]},
+    {id:3,name:'Bärlauch',latin:'Allium ursinum',emoji:'🧄',category:'Wildpflanzen',
+     stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:4,
+     uses:['Kochen','Salat'],
+     desc:'Frühjahrsbote! Vorsicht: nicht mit Maiglöckchen verwechseln.',
+     photo:null,
+     locations:[{id:1,name:'Buchenmischwald feuchte Stelle',lat:50.941,lng:6.958}],
+     recipes:[{title:'Bärlauch-Pesto',desc:'100g Blätter, 50g Parmesan, 50g Pinienkerne, 150ml Olivenöl, Salz.'},{title:'Bärlauch-Butter',desc:'100g Butter + 3 EL Bärlauch fein gehackt, vermengen.'}]},
+    {id:4,name:'Holunder',latin:'Sambucus nigra',emoji:'🫐',category:'Beeren',
+     stages:['Altpflanze','Saatgut'],monStart:6,monEnd:9,
+     uses:['Kochen','Tinkturen'],
+     desc:'Blüten im Juni, Beeren ab August.',
+     photo:null,
+     locations:[{id:1,name:'Hecke am Feldweg',lat:51.340,lng:12.374}],
+     recipes:[{title:'Holunderblüten-Sirup',desc:'20 Dolden, 1kg Zucker, 1L Wasser, 2 Zitronen. 24h ziehen lassen, abseihen.'}]},
+  ];
+  save();
+}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+function notify(msg){
+  const n=document.getElementById('notification');
+  n.textContent=msg; n.style.display='block';
+  setTimeout(()=>n.style.display='none',3000);
+}
+function escXml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeOnBg(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  const tabs=['uebersicht','kalender','karte','rezepte','export'];
+  document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('active',tabs[i]===id));
+  if(id==='uebersicht') renderPlants();
+  if(id==='kalender'){updateCatSelects();renderCalendar();}
+  if(id==='karte'){updateCatSelects();renderMap();}
+  if(id==='rezepte') renderRezepte();
+  if(id==='export'){renderStats();}
+}
+
+function updateCatSelects(){
+  ['filterCat','calFilterCat'].forEach(sid=>{
+    const el=document.getElementById(sid); if(!el)return;
+    const val=el.value;
+    el.innerHTML='<option value="">Alle Kategorien</option>'+categories.map(c=>`<option value="${c}"${c===val?' selected':''}>${c}</option>`).join('');
+  });
+}
+
+// ══════════════════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════════════════
+function renderPlants(){
+  updateCatSelects();
+  const grid=document.getElementById('plantsGrid');
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const cat=document.getElementById('filterCat').value;
+  const use=document.getElementById('filterUse').value;
+  let list=plants.filter(p=>{
+    const mq=!q||p.name.toLowerCase().includes(q)||(p.latin||'').toLowerCase().includes(q);
+    const mc=!cat||p.category===cat;
+    const mu=!use||(p.uses||[]).includes(use);
+    return mq&&mc&&mu;
+  });
+  if(!list.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🌱</div><h3>Noch keine Pflanzen</h3><p>Klicke auf „+ Neu" um deine erste Pflanze hinzuzufügen.</p></div>`;
+    return;
+  }
+  grid.innerHTML=list.map(p=>{
+    const cc=catColor(p.category||'');
+    const locs=p.locations||[];
+    return `<div class="plant-card" onclick="openDetail(${p.id})">
+      <div class="plant-card-img">
+        ${p.photo?`<img src="${p.photo}" alt="${p.name}">`:(p.emoji||'🌿')}
+        ${p.category?`<span class="cat-ribbon" style="background:${cc}">${p.category}</span>`:''}
+      </div>
+      <div class="plant-card-body">
+        <h3>${p.name}</h3>
+        <div class="latin">${p.latin||''}</div>
+        <div class="tags">
+          <span class="tag tag-season">⏰ ${MONTHS[p.monStart||0]}–${MONTHS[p.monEnd||11]}</span>
+          ${(p.uses||[]).slice(0,2).map(u=>`<span class="tag tag-use">${u}</span>`).join('')}
+        </div>
+        <div class="loc-count">📍 ${locs.length} Standort${locs.length!==1?'e':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  CALENDAR with color bars
+// ══════════════════════════════════════════
+function renderCalendar(){
+  const cat=document.getElementById('calFilterCat')?.value||'';
+  let list=plants.filter(p=>!cat||p.category===cat);
+  const body=document.getElementById('calBody');
+  if(!list.length){
+    body.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:28px;color:var(--text-muted)">Keine Pflanzen gefunden</td></tr>`;
+    return;
+  }
+  body.innerHTML=list.flatMap(p=>{
+    const cc=catColor(p.category||'');
+    return (p.stages&&p.stages.length?p.stages:['Altpflanze']).map((stage,si)=>{
+      const start=p.monStart||0, end=p.monEnd||11;
+      const monthCells=Array.from({length:12},(_,i)=>{
+        let fill='0%', color='transparent';
+        if(i>=start&&i<=end){ fill='100%'; color=cc; }
+        else if(i===start-1||i===end+1){ fill='50%'; color=catColor(p.category||'')+'99'; }
+        return `<td class="month-cell">
+          <div class="month-bar-wrap">
+            <div class="month-bar-fill" style="width:${fill};background:${color};"></div>
+          </div>
+        </td>`;
+      }).join('');
+      return `<tr onclick="openDetail(${p.id})" title="Klicken zum Bearbeiten">
+        <td>${si===0?`<div class="plant-name-cell">${p.emoji||'🌿'} ${p.name}</div><div class="plant-latin-cell">${p.latin||''}</div>`:''}</td>
+        <td>${si===0&&p.category?`<span class="tag tag-cat" style="background:${cc}">${p.category}</span>`:''}</td>
+        <td class="stage-cell"><span class="stage-badge stage-${stage.toLowerCase().replace('ä','a')}">${stage}</span></td>
+        ${monthCells}
+      </tr>`;
+    });
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  MAP
+// ══════════════════════════════════════════
+function renderMap(){
+  if(!leafletMap){
+    leafletMap=L.map('mapContainer').setView([51.1657,10.4515],6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap',maxZoom:19
+    }).addTo(leafletMap);
+  }
+  // clear
+  mapMarkers.forEach(m=>m.remove());
+  mapMarkers=[];
+
+  // build category filter buttons
+  const fc=document.getElementById('mapCatFilters');
+  const allCats=[...new Set(plants.map(p=>p.category).filter(Boolean))];
+  // keep ALL button, rebuild rest
+  fc.innerHTML=`<span style="font-size:.85rem;font-weight:700;color:var(--text-muted);">Filter:</span>
+    <button class="cat-filter-btn ${activeCatFilters.has('ALL')?'active':''}" data-cat="ALL" 
+      onclick="toggleMapCat(this)" style="border-color:var(--green-mid);${activeCatFilters.has('ALL')?'background:var(--green-mid);color:#fff;':'color:var(--green-mid);'}">Alle</button>`
+    +allCats.map(c=>{
+      const col=catColor(c);
+      const on=activeCatFilters.has(c)||activeCatFilters.has('ALL');
+      return `<button class="cat-filter-btn ${on&&!activeCatFilters.has('ALL')?'active':''}" data-cat="${c}"
+        onclick="toggleMapCat(this)" style="border-color:${col};${on&&!activeCatFilters.has('ALL')?`background:${col};color:#fff;`:`color:${col};`}">${c}</button>`;
+    }).join('');
+
+  const bounds=[];
+  plants.forEach(p=>{
+    if(!p.category && !activeCatFilters.has('ALL') && !activeCatFilters.has('')) return;
+    if(!activeCatFilters.has('ALL')&&p.category&&!activeCatFilters.has(p.category)) return;
+    (p.locations||[]).forEach(loc=>{
+      if(!loc.lat||!loc.lng) return;
+      const col=catColor(p.category||'');
+      const icon=L.divIcon({
+        className:'',
+        html:`<div style="width:32px;height:32px;background:${col};border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;">${p.emoji||'🌿'}</div>`,
+        iconSize:[32,32],iconAnchor:[16,16]
+      });
+      const m=L.marker([loc.lat,loc.lng],{icon}).addTo(leafletMap);
+      m.bindPopup(`<b>${p.emoji||''} ${p.name}</b><br><i>${p.latin||''}</i><br>📍 ${loc.name||''}<br><span style="font-size:.8rem;color:#666">${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}</span><br><a href="#" onclick="event.preventDefault();openDetail(${p.id})" style="color:var(--green-mid);font-weight:700">Details →</a>`);
+      mapMarkers.push(m);
+      bounds.push([loc.lat,loc.lng]);
+    });
+  });
+  if(bounds.length) leafletMap.fitBounds(bounds,{padding:[30,30],maxZoom:13});
+  setTimeout(()=>leafletMap.invalidateSize(),100);
+}
+
+function toggleMapCat(btn){
+  const cat=btn.dataset.cat;
+  if(cat==='ALL'){
+    activeCatFilters=new Set(['ALL']);
+  } else {
+    activeCatFilters.delete('ALL');
+    if(activeCatFilters.has(cat)) activeCatFilters.delete(cat);
+    else activeCatFilters.add(cat);
+    if(!activeCatFilters.size) activeCatFilters.add('ALL');
+  }
+  renderMap();
+}
+
+// ══════════════════════════════════════════
+//  REZEPTE
+// ══════════════════════════════════════════
+function renderRezepte(){
+  const div=document.getElementById('rezepteList');
+  const wp=plants.filter(p=>p.recipes&&p.recipes.some(r=>r.title));
+  if(!wp.length){
+    div.innerHTML=`<div class="empty-state"><div class="icon">🍵</div><h3>Noch keine Rezepte</h3><p>Füge beim Eintragen einer Pflanze Rezepte hinzu.</p></div>`;
+    return;
+  }
+  div.innerHTML=wp.map(p=>`
+    <div class="recipe-section-plant">
+      <h3>${p.emoji||'🌿'} ${p.name} <span style="font-size:.8rem;font-style:italic;color:var(--text-muted);font-family:inherit;">${p.latin||''}</span></h3>
+      ${p.recipes.filter(r=>r.title).map(r=>`
+        <div class="recipe-card">
+          <h5>🍃 ${r.title}</h5>
+          <p>${r.desc||''}</p>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════
+function renderStats(){
+  const div=document.getElementById('statsDiv');
+  div.innerHTML=[
+    {num:plants.length,lbl:'Pflanzen',bg:'var(--green-pale)',col:'var(--green-dark)'},
+    {num:plants.filter(p=>p.locations&&p.locations.length).length,lbl:'mit Standorten',bg:'#fff3cd',col:'#856404'},
+    {num:plants.flatMap(p=>p.locations||[]).length,lbl:'Standorte gesamt',bg:'#fde8d8',col:'var(--accent)'},
+    {num:plants.flatMap(p=>p.recipes||[]).filter(r=>r.title).length,lbl:'Rezepte',bg:'#e8d4f5',col:'#5a1a6b'},
+  ].map(s=>`<div class="stat-box" style="background:${s.bg}"><div class="num" style="color:${s.col}">${s.num}</div><div class="lbl">${s.lbl}</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════
+//  DETAIL MODAL
+// ══════════════════════════════════════════
+function openDetail(id){
+  currentDetailId=id;
+  const p=plants.find(x=>x.id===id); if(!p)return;
+  document.getElementById('dm_name').textContent=`${p.emoji||'🌿'} ${p.name}`;
+  document.getElementById('dm_latin').textContent=p.latin||'';
+  renderDetailInfo(p);
+  renderDetailLocs(p);
+  renderDetailEdit(p);
+  switchEtab(0);
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function switchEtab(i){
+  document.querySelectorAll('.etab').forEach((b,j)=>b.classList.toggle('active',i===j));
+  document.querySelectorAll('.etab-panel').forEach((p,j)=>p.classList.toggle('active',i===j));
+  if(i===1) renderDetailLocs(plants.find(x=>x.id===currentDetailId));
+}
+
+function renderDetailInfo(p){
+  const cc=catColor(p.category||'');
+  document.getElementById('dm_info').innerHTML=`
+    ${p.photo?`<img src="${p.photo}" style="width:100%;height:180px;object-fit:cover;border-radius:10px;margin-bottom:16px;">`:''}
+    <div class="modal-section">
+      <h4>🏷️ Kategorie & Verwendung</h4>
+      <div class="tags">
+        ${p.category?`<span class="tag tag-cat" style="background:${cc}">${p.category}</span>`:''}
+        ${(p.uses||[]).map(u=>`<span class="tag tag-use">${u}</span>`).join('')}
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>🌱 Pflanzenstadien</h4>
+      <div>${(p.stages||[]).map(s=>`<span class="stage-badge stage-${s.toLowerCase().replace('ä','a')}">${s}</span>`).join(' ')}</div>
+    </div>
+    <div class="modal-section">
+      <h4>📅 Erntezeit</h4>
+      <p>${MONTHS[p.monStart||0]} – ${MONTHS[p.monEnd||11]}</p>
+    </div>
+    ${p.desc?`<div class="modal-section"><h4>📝 Notizen</h4><p>${p.desc}</p></div>`:''}
+    ${p.recipes&&p.recipes.some(r=>r.title)?`
+      <div class="modal-section">
+        <h4>🍵 Rezepte</h4>
+        ${p.recipes.filter(r=>r.title).map(r=>`<div class="recipe-card"><h5>${r.title}</h5><p>${r.desc||''}</p></div>`).join('')}
+      </div>`:''}
+    <div style="margin-top:14px;">
+      <button class="btn btn-danger btn-sm" onclick="deletePlant(${p.id})">🗑️ Pflanze löschen</button>
+    </div>`;
+}
+
+function renderDetailLocs(p){
+  if(!p)return;
+  const div=document.getElementById('dm_locs');
+  div.innerHTML=`
+    <div id="locsList">
+      ${(p.locations||[]).length===0?'<p style="color:var(--text-muted);font-size:.88rem;margin-bottom:14px;">Noch keine Standorte eingetragen.</p>':
+        (p.locations||[]).map(loc=>`
+          <div class="loc-list-item" id="locitem_${loc.id}">
+            <div style="font-size:1.4rem">📍</div>
+            <div class="loc-info">
+              <div class="loc-title">${loc.name||'Unbenannt'}</div>
+              <div class="loc-coord">${loc.lat?loc.lat.toFixed(5):'-'}, ${loc.lng?loc.lng.toFixed(5):'-'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+              ${loc.lat&&loc.lng?`<button class="btn btn-secondary btn-sm btn-icon" onclick="openMaps(${loc.lat},${loc.lng})">🗺️ Maps</button>`:''}
+              <button class="btn btn-danger btn-sm btn-icon" onclick="removeLoc(${p.id},${loc.id})">🗑️</button>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div style="margin-top:16px;background:#f0f7e8;border-radius:10px;padding:14px;">
+      <strong style="font-size:.88rem;color:var(--green-dark);">+ Neuen Standort hinzufügen</strong>
+      <div style="margin-top:10px;">
+        <input type="text" id="newLocName" placeholder="Name / Beschreibung" style="width:100%;padding:8px 12px;border:2px solid var(--green-pale);border-radius:8px;margin-bottom:8px;font-family:'Lato',sans-serif;font-size:.9rem;outline:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <input type="number" id="newLocLat" placeholder="Breitengrad (Lat)" step="0.00001" style="padding:8px 12px;border:2px solid var(--green-pale);border-radius:8px;font-family:'Lato',sans-serif;font-size:.9rem;outline:none;">
+          <input type="number" id="newLocLng" placeholder="Längengrad (Lng)" step="0.00001" style="padding:8px 12px;border:2px solid var(--green-pale);border-radius:8px;font-family:'Lato',sans-serif;font-size:.9rem;outline:none;">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="addLocation(${p.id})">✅ Hinzufügen</button>
+          <button class="gps-btn" onclick="getGPSForLoc()">📍 GPS ermitteln</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderDetailEdit(p){
+  const catOpts=categories.map(c=>`<option value="${c}"${p.category===c?' selected':''}>${c}</option>`).join('');
+  const hasPhoto=!!p.photo;
+  document.getElementById('dm_edit').innerHTML=`
+    <div class="form-group">
+      <label>Foto</label>
+      <div class="photo-edit-wrap" id="e_photoWrap" onclick="document.getElementById('e_photoFile').click()">
+        ${hasPhoto?`<img src="${p.photo}" id="e_photoImg" alt="Foto">`:'📷'}
+        <button class="photo-edit-btn" onclick="event.stopPropagation();document.getElementById('e_photoFile').click()">📷 Ändern</button>
+        ${hasPhoto?`<button class="photo-edit-del" onclick="event.stopPropagation();deleteEditPhoto()">🗑️ Löschen</button>`:''}
+        <input type="file" id="e_photoFile" accept="image/*" onchange="previewEditPhoto(this)" style="display:none;">
+      </div>
+    </div>
+    <div class="form-group"><label>Name</label><input id="e_name" value="${p.name||''}"></div>
+    <div class="form-group"><label>Lateinisch</label><input id="e_latin" value="${p.latin||''}"></div>
+    <div class="form-group"><label>Emoji</label><input id="e_emoji" value="${p.emoji||'🌿'}" style="width:70px;" maxlength="4"></div>
+    <div class="form-group">
+      <label>Kategorie</label>
+      <div class="cat-select-wrap">
+        <select id="e_cat">${catOpts}</select>
+      </div>
+      <div class="cat-add-input">
+        <input type="text" id="e_newcat" placeholder="Neue Kategorie hinzufügen...">
+        <button class="btn btn-earth btn-sm" onclick="addCategory()">+ Hinzufügen</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Pflanzenstadien</label>
+      <div class="stage-badges-wrap">
+        ${['Jungpflanze','Halbwuchs','Altpflanze','Saatgut'].map(s=>`
+          <label class="stage-label"><input type="checkbox" class="e_stage" value="${s}"${(p.stages||[]).includes(s)?' checked':''}>
+          <span class="stage-badge stage-${s.toLowerCase().replace('ä','a')}">${s}</span></label>`).join('')}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Erntestart</label>
+        <select id="e_monStart">${MONTHS.map((m,i)=>`<option value="${i}"${i===(p.monStart||0)?' selected':''}>${m}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Ernteende</label>
+        <select id="e_monEnd">${MONTHS.map((m,i)=>`<option value="${i}"${i===(p.monEnd||11)?' selected':''}>${m}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-group"><label>Verwendung (Komma-getrennt)</label>
+      <input id="e_uses" value="${(p.uses||[]).join(', ')}"></div>
+    <div class="form-group"><label>Beschreibung</label>
+      <textarea id="e_desc">${p.desc||''}</textarea></div>
+    <div class="form-group"><label>Rezept 1 – Titel</label><input id="e_r1t" value="${(p.recipes&&p.recipes[0])?p.recipes[0].title:''}" placeholder="z.B. Tee"></div>
+    <div class="form-group"><label>Rezept 1 – Anleitung</label><textarea id="e_r1d">${(p.recipes&&p.recipes[0])?p.recipes[0].desc:''}</textarea></div>
+    <div class="form-group"><label>Rezept 2 – Titel</label><input id="e_r2t" value="${(p.recipes&&p.recipes[1])?p.recipes[1].title:''}" placeholder="z.B. Suppe"></div>
+    <div class="form-group"><label>Rezept 2 – Anleitung</label><textarea id="e_r2d">${(p.recipes&&p.recipes[1])?p.recipes[1].desc:''}</textarea></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Speichern</button>
+    </div>`;
+}
+
+function saveEdit(){
+  const p=plants.find(x=>x.id===currentDetailId); if(!p)return;
+  p.name=document.getElementById('e_name').value.trim()||p.name;
+  p.latin=document.getElementById('e_latin').value.trim();
+  p.emoji=document.getElementById('e_emoji').value.trim()||'🌿';
+  p.category=document.getElementById('e_cat').value;
+  p.stages=[...document.querySelectorAll('.e_stage:checked')].map(c=>c.value);
+  p.monStart=parseInt(document.getElementById('e_monStart').value);
+  p.monEnd=parseInt(document.getElementById('e_monEnd').value);
+  p.uses=document.getElementById('e_uses').value.split(',').map(s=>s.trim()).filter(Boolean);
+  p.desc=document.getElementById('e_desc').value.trim();
+  const r1t=document.getElementById('e_r1t').value.trim();
+  const r2t=document.getElementById('e_r2t').value.trim();
+  p.recipes=[
+    r1t?{title:r1t,desc:document.getElementById('e_r1d').value.trim()}:null,
+    r2t?{title:r2t,desc:document.getElementById('e_r2d').value.trim()}:null,
+  ].filter(Boolean);
+  // photo: read from img element if present
+  const imgEl=document.getElementById('e_photoImg');
+  if(imgEl) p.photo=imgEl.src;
+  save();
+  document.getElementById('dm_name').textContent=`${p.emoji} ${p.name}`;
+  notify('✅ Änderungen gespeichert!');
+  renderPlants();
+}
+
+function previewEditPhoto(input){
+  if(!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wrap=document.getElementById('e_photoWrap');
+    wrap.innerHTML=`<img src="${e.target.result}" id="e_photoImg" alt="Foto">
+      <button class="photo-edit-btn" onclick="event.stopPropagation();document.getElementById('e_photoFile').click()">📷 Ändern</button>
+      <button class="photo-edit-del" onclick="event.stopPropagation();deleteEditPhoto()">🗑️ Löschen</button>
+      <input type="file" id="e_photoFile" accept="image/*" onchange="previewEditPhoto(this)" style="display:none;">`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function deleteEditPhoto(){
+  const p=plants.find(x=>x.id===currentDetailId); if(!p)return;
+  p.photo=null; save();
+  const wrap=document.getElementById('e_photoWrap');
+  wrap.innerHTML=`📷<button class="photo-edit-btn" onclick="event.stopPropagation();document.getElementById('e_photoFile').click()">📷 Hinzufügen</button>
+    <input type="file" id="e_photoFile" accept="image/*" onchange="previewEditPhoto(this)" style="display:none;">`;
+  renderPlants();
+}
+
+function addCategory(){
+  const inp=document.getElementById('e_newcat');
+  const val=inp.value.trim();
+  if(!val){notify('⚠️ Bitte Namen eingeben');return;}
+  if(!categories.includes(val)) categories.push(val);
+  save();
+  inp.value='';
+  // refresh select
+  const p=plants.find(x=>x.id===currentDetailId);
+  if(p) renderDetailEdit(p);
+  notify(`✅ Kategorie „${val}" hinzugefügt`);
+}
+
+function addLocation(plantId){
+  const p=plants.find(x=>x.id===plantId); if(!p)return;
+  const name=document.getElementById('newLocName').value.trim();
+  const lat=parseFloat(document.getElementById('newLocLat').value);
+  const lng=parseFloat(document.getElementById('newLocLng').value);
+  if(!name&&!lat){notify('⚠️ Bitte Name oder Koordinaten eingeben');return;}
+  if(!p.locations) p.locations=[];
+  p.locations.push({id:Date.now(),name,lat:isNaN(lat)?null:lat,lng:isNaN(lng)?null:lng});
+  save();
+  renderDetailLocs(p);
+  notify('📍 Standort hinzugefügt!');
+}
+
+function removeLoc(plantId,locId){
+  const p=plants.find(x=>x.id===plantId); if(!p)return;
+  p.locations=(p.locations||[]).filter(l=>l.id!==locId);
+  save();
+  renderDetailLocs(p);
+  notify('🗑️ Standort entfernt');
+}
+
+function getGPSForLoc(){
+  if(!navigator.geolocation){notify('GPS nicht verfügbar');return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('newLocLat').value=pos.coords.latitude.toFixed(6);
+    document.getElementById('newLocLng').value=pos.coords.longitude.toFixed(6);
+    notify('📍 Position ermittelt!');
+  },()=>notify('GPS-Zugriff verweigert'));
+}
+
+function deletePlant(id){
+  if(!confirm('Pflanze wirklich löschen?'))return;
+  plants=plants.filter(p=>p.id!==id);
+  save();
+  closeModal('detailOverlay');
+  renderPlants();
+  notify('🗑️ Pflanze gelöscht');
+}
+
+function openMaps(lat,lng){
+  window.open(`https://www.google.com/maps?q=${lat},${lng}`,'_blank');
+}
+
+// ══════════════════════════════════════════
+//  ADD FORM
+// ══════════════════════════════════════════
+function openAddModal(){
+  buildAddForm();
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function buildAddForm(){
+  const catOpts=categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('addModalBody').innerHTML=`
+    <div class="form-group">
+      <label>Foto</label>
+      <div class="photo-preview" id="ap_photoPreview" onclick="document.getElementById('ap_photoFile').click()">
+        📷<input type="file" id="ap_photoFile" accept="image/*" onchange="previewAddPhoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Name *</label><input id="ap_name" placeholder="z.B. Brennnessel"></div>
+      <div class="form-group"><label>Lateinisch</label><input id="ap_latin" placeholder="z.B. Urtica dioica"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Kategorie</label>
+        <select id="ap_cat">${catOpts}</select>
+        <div class="cat-add-input">
+          <input type="text" id="ap_newcat" placeholder="Neue Kategorie...">
+          <button class="btn btn-earth btn-sm" onclick="addCatFromAdd()">+</button>
+        </div>
+      </div>
+      <div class="form-group"><label>Emoji</label><input id="ap_emoji" placeholder="🌿" maxlength="4" style="width:80px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Pflanzenstadien</label>
+      <div class="stage-badges-wrap">
+        ${['Jungpflanze','Halbwuchs','Altpflanze','Saatgut'].map(s=>`
+          <label class="stage-label"><input type="checkbox" class="ap_stage" value="${s}">
+          <span class="stage-badge stage-${s.toLowerCase().replace('ä','a')}">${s}</span></label>`).join('')}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Erntestart</label>
+        <select id="ap_monStart">${MONTHS.map((m,i)=>`<option value="${i}"${i===4?' selected':''}>${m}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Ernteende</label>
+        <select id="ap_monEnd">${MONTHS.map((m,i)=>`<option value="${i}"${i===7?' selected':''}>${m}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-group"><label>Verwendung (Komma-getrennt)</label>
+      <input id="ap_uses" placeholder="z.B. Tee, Salat, Medizin"></div>
+    <div class="form-group"><label>Erster Standort (Name)</label>
+      <input id="ap_locName" placeholder="z.B. Waldrand am Bach"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Breitengrad</label><input type="number" id="ap_lat" placeholder="z.B. 52.5200" step="0.00001"></div>
+      <div class="form-group"><label>Längengrad</label><input type="number" id="ap_lng" placeholder="z.B. 13.4050" step="0.00001"></div>
+    </div>
+    <button class="gps-btn" onclick="getGPSAdd()">📍 GPS ermitteln</button>
+    <div class="form-group" style="margin-top:16px;"><label>Beschreibung</label><textarea id="ap_desc" placeholder="Notizen, Erkennungsmerkmale..."></textarea></div>
+    <div class="form-group"><label>Rezept 1 – Titel</label><input id="ap_r1t" placeholder="z.B. Tee"></div>
+    <div class="form-group"><label>Rezept 1 – Anleitung</label><textarea id="ap_r1d" placeholder="Zubereitung..."></textarea></div>
+    <div class="form-group"><label>Rezept 2 – Titel</label><input id="ap_r2t" placeholder="z.B. Suppe"></div>
+    <div class="form-group"><label>Rezept 2 – Anleitung</label><textarea id="ap_r2d" placeholder="Zubereitung..."></textarea></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveNewPlant()">✅ Pflanze speichern</button>
+      <button class="btn btn-secondary" onclick="closeModal('addOverlay')">Abbrechen</button>
+    </div>`;
+}
+
+function addCatFromAdd(){
+  const val=document.getElementById('ap_newcat').value.trim();
+  if(!val)return;
+  if(!categories.includes(val)) categories.push(val);
+  save();
+  document.getElementById('ap_newcat').value='';
+  // refresh select
+  const sel=document.getElementById('ap_cat');
+  sel.innerHTML=categories.map(c=>`<option value="${c}"${c===val?' selected':''}>${c}</option>`).join('');
+  notify(`✅ Kategorie „${val}" hinzugefügt`);
+}
+
+function previewAddPhoto(input){
+  if(!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('ap_photoPreview');
+    prev.innerHTML=`<img src="${e.target.result}" alt="Vorschau"><input type="file" id="ap_photoFile" accept="image/*" onchange="previewAddPhoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;">`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function getGPSAdd(){
+  if(!navigator.geolocation){notify('GPS nicht verfügbar');return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('ap_lat').value=pos.coords.latitude.toFixed(6);
+    document.getElementById('ap_lng').value=pos.coords.longitude.toFixed(6);
+    notify('📍 Position ermittelt!');
+  },()=>notify('GPS-Zugriff verweigert'));
+}
+
+function saveNewPlant(){
+  const name=document.getElementById('ap_name').value.trim();
+  if(!name){notify('⚠️ Bitte Namen eingeben');return;}
+  const lat=parseFloat(document.getElementById('ap_lat').value);
+  const lng=parseFloat(document.getElementById('ap_lng').value);
+  const locName=document.getElementById('ap_locName').value.trim();
+  const stages=[...document.querySelectorAll('.ap_stage:checked')].map(c=>c.value);
+  const photoEl=document.querySelector('#ap_photoPreview img');
+  const r1t=document.getElementById('ap_r1t').value.trim();
+  const r2t=document.getElementById('ap_r2t').value.trim();
+  plants.push({
+    id:Date.now(),name,
+    latin:document.getElementById('ap_latin').value.trim(),
+    emoji:document.getElementById('ap_emoji').value.trim()||'🌿',
+    category:document.getElementById('ap_cat').value,
+    stages:stages.length?stages:['Altpflanze'],
+    monStart:parseInt(document.getElementById('ap_monStart').value),
+    monEnd:parseInt(document.getElementById('ap_monEnd').value),
+    uses:document.getElementById('ap_uses').value.split(',').map(s=>s.trim()).filter(Boolean),
+    desc:document.getElementById('ap_desc').value.trim(),
+    photo:photoEl?photoEl.src:null,
+    locations:(locName||(!isNaN(lat)&&!isNaN(lng)))?[{id:Date.now(),name:locName,lat:isNaN(lat)?null:lat,lng:isNaN(lng)?null:lng}]:[],
+    recipes:[
+      r1t?{title:r1t,desc:document.getElementById('ap_r1d').value.trim()}:null,
+      r2t?{title:r2t,desc:document.getElementById('ap_r2d').value.trim()}:null,
+    ].filter(Boolean)
+  });
+  save();
+  closeModal('addOverlay');
+  renderPlants();
+  notify(`✅ ${name} gespeichert!`);
+}
+
+// ══════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════
+function exportKML(){
+  const allLocs=plants.flatMap(p=>(p.locations||[]).map(l=>({...l,plant:p})));
+  const gps=allLocs.filter(l=>l.lat&&l.lng);
+  if(!gps.length){notify('⚠️ Keine GPS-Koordinaten vorhanden');return;}
+  const placemarks=gps.map(l=>`
+  <Placemark>
+    <name>${escXml(l.plant.name)} – ${escXml(l.name||'Standort')}</name>
+    <description><![CDATA[
+      <b>${l.plant.name}</b> (${l.plant.latin||''})<br>
+      Kategorie: ${l.plant.category||''}<br>
+      Standort: ${l.name||''}<br>
+      Erntezeit: ${MONTHS[l.plant.monStart||0]}–${MONTHS[l.plant.monEnd||11]}<br>
+      Verwendung: ${(l.plant.uses||[]).join(', ')}
+    ]]></description>
+    <Point><coordinates>${l.lng},${l.lat},0</coordinates></Point>
+  </Placemark>`).join('');
+  const kml=`<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>Pflanzenfinder</name>${placemarks}\n  </Document>\n</kml>`;
+  download('pflanzenfundorte.kml',kml,'application/vnd.google-earth.kml+xml');
+  notify(`🌍 ${gps.length} Standorte exportiert!`);
+}
+
+function exportJSON(){
+  download('pflanzenfinder_backup.json',JSON.stringify({plants,categories},null,2),'application/json');
+  notify('💾 Daten exportiert!');
+}
+
+function importJSON(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.plants){plants=data.plants;if(data.categories)categories=data.categories;}
+      else if(Array.isArray(data))plants=data;
+      else{notify('⚠️ Ungültiges Format');return;}
+      save();renderPlants();updateCatSelects();
+      notify(`✅ ${plants.length} Pflanzen importiert!`);
+    }catch{notify('⚠️ Datei konnte nicht gelesen werden');}
+  };
+  reader.readAsText(file);
+}
+
+function download(filename,text,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type}));
+  a.download=filename;a.click();
+}
+
+// ══════════════════════════════════════════
+//  PLANT DATABASE
+// ══════════════════════════════════════════
+const PLANT_DB = [
+  // KRÄUTER
+  {name:'Basilikum',latin:'Ocimum basilicum',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:4,monEnd:8,uses:['Kochen','Tee'],desc:'Wärmeliebendes Kraut. Ideal für Tomatengerichte. Nicht in der Sonne gießen.',recipes:[{title:'Pesto Genovese',desc:'50g Basilikum, 2 Knoblauchzehen, 30g Parmesan, 30g Pinienkerne, 80ml Olivenöl – alles fein mixen.'},{title:'Tomaten-Basilikum-Salat',desc:'Tomaten in Scheiben, frisches Basilikum, Olivenöl, Salz, Balsamico.'}]},
+  {name:'Thymian',latin:'Thymus vulgaris',emoji:'🌱',category:'Kräuter',stages:['Halbwuchs','Altpflanze'],monStart:4,monEnd:9,uses:['Kochen','Medizin','Tee'],desc:'Mehrjähriges Würzkraut. Bevorzugt sonnige, trockene Standorte.',recipes:[{title:'Thymian-Tee',desc:'1 TL frische Zweige, 200ml heißes Wasser, 8 Min. ziehen. Gut bei Husten und Erkältung.'},{title:'Kräuterbutter',desc:'100g Butter, 2 EL Thymian, 1 Knoblauchzehe, Zitronenschale – gut vermengen.'}]},
+  {name:'Rosmarin',latin:'Salvia rosmarinus',emoji:'🌿',category:'Kräuter',stages:['Halbwuchs','Altpflanze'],monStart:3,monEnd:10,uses:['Kochen','Medizin'],desc:'Immergrüner Halbstrauch. Sehr aromatisch. Frostempfindlich unter -10°C.',recipes:[{title:'Rosmarinkartoffeln',desc:'Kartoffeln halbieren, mit Olivenöl, grobem Salz und Rosmarinzweigen bei 200°C 40 Min. rösten.'},{title:'Rosmarin-Öl',desc:'Frische Zweige in eine Flasche Olivenöl geben, 2 Wochen ziehen lassen.'}]},
+  {name:'Salbei',latin:'Salvia officinalis',emoji:'🌿',category:'Kräuter',stages:['Halbwuchs','Altpflanze'],monStart:4,monEnd:8,uses:['Kochen','Medizin','Tee'],desc:'Halbstrauch. Antibakteriell. Hilft bei Halsschmerzen und übermäßigem Schwitzen.',recipes:[{title:'Salbei-Tee',desc:'3–5 frische Blätter mit heißem Wasser übergießen, 5–7 Min. ziehen. Gegen Halsschmerzen gurgeln.'},{title:'Saltimbocca-Butter',desc:'Butter in der Pfanne erhitzen, Salbeiblätter darin knusprig braten.'}]},
+  {name:'Pfefferminze',latin:'Mentha × piperita',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:4,monEnd:9,uses:['Tee','Medizin','Kochen'],desc:'Stark wüchsig – am besten in Töpfen halten. Bevorzugt feuchte, halbschattige Standorte.',recipes:[{title:'Pfefferminztee',desc:'1 EL frische Blätter mit 250ml kochendem Wasser, 5 Min. ziehen. Magenschonend und kühlend.'},{title:'Minzsirup',desc:'500ml Wasser + 500g Zucker aufkochen, 30 frische Blätter dazu, 30 Min. ziehen, abseihen.'}]},
+  {name:'Oregano',latin:'Origanum vulgare',emoji:'🌿',category:'Kräuter',stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:9,uses:['Kochen','Medizin'],desc:'Mehrjährig, liebt sonnige Kalkstandorte. Pizza- und Pastakraut par excellence.',recipes:[{title:'Pizza-Tomatensoße',desc:'Dosentomaten, 2 EL Oregano, Knoblauch, Olivenöl, Salz – 15 Min. köcheln lassen.'},{title:'Oregano-Tinktur',desc:'50g frische Blüten in 200ml Hochprozentigem, 3 Wochen dunkel stellen.'}]},
+  {name:'Schnittlauch',latin:'Allium schoenoprasum',emoji:'🥬',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:10,uses:['Kochen','Salat'],desc:'Sehr pflegeleicht. Verträgt Halbschatten. Blüten sind ebenfalls essbar.',recipes:[{title:'Schnittlauch-Quark',desc:'250g Quark, 3 EL Schnittlauch, Salz, Pfeffer – als Brotaufstrich oder Dip.'},{title:'Kräuter-Pfannkuchen',desc:'Normale Pfannkuchen mit 2 EL Schnittlauch im Teig, herzhaft servieren.'}]},
+  {name:'Petersilie',latin:'Petroselinum crispum',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:10,uses:['Kochen','Salat','Medizin'],desc:'Zweijährig. Reich an Vitamin C und Eisen. Glattblättrige Sorten aromatischer.',recipes:[{title:'Gremolata',desc:'Petersilie, Knoblauch, Zitronenschale fein hacken – passt zu Ossobuco und Grillgerichten.'},{title:'Taboulé',desc:'Bulgur, viel frische Petersilie, Tomaten, Gurke, Zitronensaft, Olivenöl, Minze.'}]},
+  {name:'Koriander',latin:'Coriandrum sativum',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:4,monEnd:8,uses:['Kochen'],desc:'Einjährig. Schnell schossend bei Hitze. Samen und Blätter verwendbar.',recipes:[{title:'Guacamole',desc:'2 Avocados, Limette, 1 Knoblauch, Tomate, frischer Koriander, Salz, Chili – grob stampfen.'},{title:'Koriandersamen-Gewürzmischung',desc:'Samen rösten und mahlen für Curries, Fleisch und Marinaden.'}]},
+  {name:'Dill',latin:'Anethum graveolens',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze','Saatgut'],monStart:4,monEnd:8,uses:['Kochen','Salat'],desc:'Einjährig. Verträgt sich nicht gut mit Fenchel (nicht nebeneinander pflanzen).',recipes:[{title:'Gurken-Dill-Salat',desc:'Gurken hobeln, salzen, 30 Min. ziehen, mit Essig, Dill, Zucker und Schmand anmachen.'},{title:'Räucherlachs-Dip',desc:'Frischkäse, Räucherlachs, frischer Dill, Zitronensaft – cremig mixen.'}]},
+  {name:'Bohnenkraut',latin:'Satureja hortensis',emoji:'🌿',category:'Kräuter',stages:['Jungpflanze','Altpflanze'],monStart:5,monEnd:9,uses:['Kochen','Medizin'],desc:'Einjährig, sehr aromatisch. Klassisches Bohnen-Kraut. Verdauungsfördernd.',recipes:[{title:'Bohneneintopf',desc:'Grüne Bohnen immer mit Bohnenkraut kochen – verhindert Blähungen und verfeinert den Geschmack.'}]},
+  {name:'Lavendel',latin:'Lavandula angustifolia',emoji:'💜',category:'Kräuter',stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:7,uses:['Medizin','Tee','Kochen'],desc:'Mehrjährig, liebt Sonne und Kalk. Beruhigend und entspannend.',recipes:[{title:'Lavendel-Lemonade',desc:'1 EL Lavendelblüten mit 500ml Wasser und 4 EL Honig aufkochen, abkühlen, Zitronensaft dazu.'},{title:'Lavendel-Schlafkissen',desc:'Getrocknete Blüten in ein kleines Leinensäckchen füllen – hilft beim Einschlafen.'}]},
+  // WILDPFLANZEN
+  {name:'Löwenzahn',latin:'Taraxacum officinale',emoji:'🌼',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze','Saatgut'],monStart:2,monEnd:9,uses:['Salat','Tee','Medizin','Kochen'],desc:'Überall. Junge Blätter im Frühling am besten. Alle Pflanzenteile essbar. Entgiftend.',recipes:[{title:'Löwenzahn-Salat',desc:'Junge Blätter, Speck-Dressing mit Essig und Speck, gekochtes Ei – Bitterstoffreicher Frühlingssalat.'},{title:'Löwenzahn-Honig',desc:'100 Blüten, 500ml Wasser, 1 Zitrone – aufkochen, 12h ziehen, abseihen, mit 500g Zucker einköcheln.'}]},
+  {name:'Gänseblümchen',latin:'Bellis perennis',emoji:'🌸',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:10,uses:['Salat','Medizin','Kochen'],desc:'Ganzjährig blühend. Zarte Blüten und Blätter essbar. Wundheilend.',recipes:[{title:'Blütensalat',desc:'Gemischter Salat mit frischen Gänseblümchenblüten garnieren – optisch und geschmacklich.'},{title:'Gänseblümchen-Tinktur',desc:'Blüten in Olivenöl einlegen, 4 Wochen, für Hautpflege und Wunden.'}]},
+  {name:'Spitzwegerich',latin:'Plantago lanceolata',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:9,uses:['Medizin','Tee'],desc:'Wegränder, Wiesen. Hustenlindernd. Blätter roh auf Insektenstiche legen.',recipes:[{title:'Spitzwegerich-Sirup',desc:'200g Blätter + 300ml Wasser + 200g Honig aufkochen, abseihen. Gegen Husten 3x täglich 1 TL.'},{title:'Wundsalbe',desc:'Blätter in geschmolzenem Bienenwachs und Olivenöl einkochen, abseihen, abkühlen lassen.'}]},
+  {name:'Gundelrebe',latin:'Glechoma hederacea',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:5,uses:['Tee','Medizin','Salat'],desc:'Schattiger Boden, häufig. Schleimlösend. Frisch im Frühjahr ernten.',recipes:[{title:'Gundelreben-Tee',desc:'2 EL frische Blätter, 250ml heißes Wasser, 8 Min. ziehen. Schleimlösend und entzündungshemmend.'}]},
+  {name:'Giersch',latin:'Aegopodium podagraria',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:7,uses:['Salat','Kochen','Medizin'],desc:'Gartenpest mit Nutzen! Junge Blätter schmecken wie Petersilie. Sehr ertragreich.',recipes:[{title:'Giersch-Pesto',desc:'100g junge Blätter, 30g Parmesan, 2 Knoblauch, 50ml Olivenöl, 20g Walnüsse – mixen.'},{title:'Giersch-Spinat',desc:'Wie Spinat zubereiten: kurz in Butter dünsten, mit Knoblauch und Muskat würzen.'}]},
+  {name:'Wiesenbärenklau',latin:'Heracleum sphondylium',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Halbwuchs'],monStart:3,monEnd:6,uses:['Kochen','Salat'],desc:'Nicht mit dem giftigen Riesen-Bärenklau verwechseln! Junge Triebe und Blätter verwenden.',recipes:[{title:'Bärenklau-Gemüse',desc:'Junge Triebe wie Spinat zubereiten oder roh im Salat. Nur kurz blanchieren.'}]},
+  {name:'Vogelmiere',latin:'Stellaria media',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:1,monEnd:11,uses:['Salat','Medizin'],desc:'Fast ganzjährig. Reich an Vitamin C. Zart und mildaromatisch.',recipes:[{title:'Vogelmiere-Salat',desc:'Frisch geerntet mit Olivenöl, Zitrone und Salz. Als Salatbett oder Beilage.'}]},
+  {name:'Taubnessel',latin:'Lamium album',emoji:'🤍',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:9,uses:['Tee','Medizin','Salat'],desc:'Nicht verwandt mit der Brennnessel – brennt nicht! Blüten und junge Blätter essbar.',recipes:[{title:'Taubnessel-Tee',desc:'2 EL Blüten und Blätter, 250ml heißes Wasser, 10 Min. ziehen. Entzündungshemmend.'}]},
+  // HEILPFLANZEN
+  {name:'Johanniskraut',latin:'Hypericum perforatum',emoji:'🌻',category:'Heilpflanzen',stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:8,uses:['Medizin','Tee','Tinkturen'],desc:'Sonnige Standorte. Stimmungsaufhellend – Wechselwirkungen mit Medikamenten möglich!',recipes:[{title:'Johanniskraut-Öl (Rotöl)',desc:'Frische Blüten in Olivenöl einlegen (Glas vollpacken), 6 Wochen in der Sonne stehen lassen. Für Muskeln und Narben.'},{title:'Johanniskraut-Tinktur',desc:'Frische Blüten in Alkohol (mind. 45%) einlegen, 4–6 Wochen dunkel, abseihen.'}]},
+  {name:'Kamille',latin:'Matricaria chamomilla',emoji:'🌼',category:'Heilpflanzen',stages:['Jungpflanze','Altpflanze','Saatgut'],monStart:4,monEnd:8,uses:['Tee','Medizin'],desc:'Sandig-lehmige Böden. Apfelähnlicher Geruch. Entzündungshemmend, beruhigend.',recipes:[{title:'Kamillen-Tee',desc:'1 EL frische oder getrocknete Blüten, 250ml heißes Wasser, 5–10 Min. abgedeckt ziehen.'},{title:'Kamillen-Dampfbad',desc:'Handvoll Blüten in eine Schüssel heißes Wasser, Kopf mit Tuch abdecken, 10 Min. dämpfen.'}]},
+  {name:'Baldrian',latin:'Valeriana officinalis',emoji:'🌸',category:'Heilpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:5,monEnd:7,uses:['Medizin','Tee'],desc:'Feuchte Standorte. Wurzel im Herbst ernten. Starkes Beruhigungs- und Schlafmittel.',recipes:[{title:'Baldrian-Tee',desc:'1 TL frisch geriebene Wurzel, 200ml lauwarmes Wasser (nicht kochen!), 8–12h kalt ansetzen, abseihen.'},{title:'Baldrian-Tinktur',desc:'Zerkleinerte Wurzel in Alkohol 4 Wochen ziehen lassen. Abends 20–30 Tropfen in Wasser.'}]},
+  {name:'Ringelblume',latin:'Calendula officinalis',emoji:'🟠',category:'Heilpflanzen',stages:['Jungpflanze','Altpflanze','Saatgut'],monStart:5,monEnd:10,uses:['Medizin','Kochen'],desc:'Sehr langblühend. Wundheilend, antiseptisch. Blütenblätter als Safranersatz.',recipes:[{title:'Ringelblumensalbe',desc:'50g Blüten in 200ml Olivenöl bei 50°C 3h erwärmen, abseihen, mit 20g Bienenwachs aufschmelzen, abfüllen.'},{title:'Ringelblumentee',desc:'2 EL frische Blüten, 250ml heißes Wasser, 10 Min. ziehen. Äußerlich als Kompresse.'}]},
+  {name:'Echinacea (Sonnenhut)',latin:'Echinacea purpurea',emoji:'💜',category:'Heilpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:6,monEnd:9,uses:['Medizin','Tee'],desc:'Immunstärkend. Besonders Wurzel und Blüten verwenden. Nicht dauerhaft einnehmen.',recipes:[{title:'Immunstärkungs-Tee',desc:'1 EL Blüten und Blätter, 250ml heißes Wasser, 10 Min. ziehen. Nur kur­weise 2 Wochen.'},{title:'Echinacea-Tinktur',desc:'Frische Blüten und Wurzelteile in 60% Alkohol, 4 Wochen ziehen, abseihen.'}]},
+  {name:'Echter Alant',latin:'Inula helenium',emoji:'🌻',category:'Heilpflanzen',stages:['Altpflanze'],monStart:6,monEnd:9,uses:['Medizin','Tee'],desc:'Feuchte Standorte. Starkes Husten- und Bronchialmittel. Wurzel im Herbst ernten.',recipes:[{title:'Alant-Wurzel-Tee',desc:'1 TL geriebene Wurzel in 300ml Wasser 10 Min. köcheln, abseihen. Gegen Bronchitis.'}]},
+  // BEEREN
+  {name:'Wilde Erdbeere',latin:'Fragaria vesca',emoji:'🍓',category:'Beeren',stages:['Jungpflanze','Altpflanze'],monStart:4,monEnd:8,uses:['Kochen','Salat','Medizin'],desc:'Waldränder und Lichtungen. Früchte, Blätter und Wurzeln verwendbar.',recipes:[{title:'Walderdbeeren-Marmelade',desc:'500g Früchte, 250g Gelierzucker 2:1, Zitronensaft – aufkochen, 4 Min. sprudelnd kochen, Gläser füllen.'},{title:'Erdbeer-Blatt-Tee',desc:'2 EL getrocknete Blätter mit heißem Wasser – mild nierenwirksam.'}]},
+  {name:'Schwarze Johannisbeere',latin:'Ribes nigrum',emoji:'🫐',category:'Beeren',stages:['Halbwuchs','Altpflanze'],monStart:6,monEnd:7,uses:['Kochen','Tee','Medizin'],desc:'Feuchte Standorte, halbschattig. Sehr viel Vitamin C.',recipes:[{title:'Johannisbeer-Gelee',desc:'1 kg Beeren entsaften, mit 500g Gelierzucker 1:1 kochen, abschäumen, in Gläser füllen.'},{title:'Cassis-Likör',desc:'500g Beeren, 500g Zucker, 1L Rotwein, 200ml Wodka – 1 Monat ziehen, abseihen.'}]},
+  {name:'Rote Johannisbeere',latin:'Ribes rubrum',emoji:'🔴',category:'Beeren',stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:7,uses:['Kochen'],desc:'Anspruchslos. Sehr saftig und sauer. Gut für Gelee und Saft.',recipes:[{title:'Johannisbeer-Saft',desc:'Beeren erhitzen, durch Tuch pressen, mit Zucker nach Geschmack einkochen.'},{title:'Rote-Grütze',desc:'500g Beeren + 300ml Saft + 4 EL Zucker + 3 EL Stärke – einkochen bis dicklich.'}]},
+  {name:'Schlehe',latin:'Prunus spinosa',emoji:'🫐',category:'Beeren',stages:['Altpflanze'],monStart:9,monEnd:11,uses:['Kochen','Tinkturen','Medizin'],desc:'Hecken und Waldränder. Früchte erst nach dem ersten Frost ernten – dann weniger bitter!',recipes:[{title:'Schlehen-Likör',desc:'500g Schlehen (angefroren), 500g Zucker, 1L Korn – 3 Monate stehen lassen, regelmäßig schütteln.'},{title:'Schlehen-Marmelade',desc:'1 kg Schlehen entkernen, mit Gelierzucker und etwas Wasser kochen, durch Sieb passieren.'}]},
+  {name:'Hagebutte',latin:'Rosa canina',emoji:'🔴',category:'Beeren',stages:['Altpflanze'],monStart:8,monEnd:11,uses:['Tee','Kochen','Medizin'],desc:'Heckenrosen-Früchte. Extrem viel Vitamin C. Kerne und Härchen entfernen!',recipes:[{title:'Hagebuttentee',desc:'2 EL getrocknete Früchte in 400ml Wasser 10 Min. köcheln, abseihen. Sehr vitaminreich.'},{title:'Hagebutten-Marmelade',desc:'1 kg Früchte, entkernt, kochen bis weich, durch Sieb, mit Gelierzucker einkochen.'}]},
+  {name:'Sanddorn',latin:'Hippophae rhamnoides',emoji:'🟠',category:'Beeren',stages:['Altpflanze'],monStart:7,monEnd:10,uses:['Kochen','Medizin'],desc:'Küsten und Flussufer. Oranger Saft extrem vitaminreich.',recipes:[{title:'Sanddorn-Smoothie',desc:'100ml Sanddornsaft, 1 Banane, 200ml Orangensaft, 1 TL Honig – mixen.'},{title:'Sanddorn-Marmelade',desc:'500g Beeren, 250g Gelierzucker 2:1, Orangenschale – einkochen, durch Sieb.'}]},
+  {name:'Brombeere',latin:'Rubus fruticosus',emoji:'🫐',category:'Beeren',stages:['Halbwuchs','Altpflanze'],monStart:7,monEnd:9,uses:['Kochen','Tee','Medizin'],desc:'Waldränder, Hecken. Dornen! Blätter für Tee verwenden.',recipes:[{title:'Brombeer-Marmelade',desc:'1 kg Brombeeren, 500g Gelierzucker 2:1, Zitronensaft – sprudelnd kochen, heiß abfüllen.'},{title:'Brombeer-Blatt-Tee',desc:'Junge Triebe und Blätter trocknen. Tee mild adstringierend, gut bei Durchfall.'}]},
+  {name:'Himbeere',latin:'Rubus idaeus',emoji:'🫐',category:'Beeren',stages:['Halbwuchs','Altpflanze'],monStart:6,monEnd:9,uses:['Kochen','Tee','Medizin'],desc:'Waldränder, Lichtungen. Zweijährige Triebe tragen Früchte.',recipes:[{title:'Himbeer-Sirup',desc:'500g Himbeeren, 300g Zucker, 100ml Wasser – kochen, abseihen, in Flaschen füllen.'},{title:'Himbeerblatt-Tee',desc:'Junge Blätter trocknen und als Tee – besonders für Frauen (tonisierend auf den Uterus).'}]},
+  {name:'Walderdbeere (Monatserdbeere)',latin:'Fragaria × ananassa (wild)',emoji:'🍓',category:'Beeren',stages:['Jungpflanze','Altpflanze'],monStart:5,monEnd:8,uses:['Kochen'],desc:'Sonnige Waldränder. Intensiver Duft und Geschmack.',recipes:[{title:'Erdbeer-Sahne-Torte',desc:'Biskuitboden, frische Walderdbeeren, geschlagene Sahne – einfach und köstlich.'}]},
+  // OBST / BÄUME
+  {name:'Holunderbeere',latin:'Sambucus nigra',emoji:'🫐',category:'Beeren',stages:['Altpflanze','Saatgut'],monStart:6,monEnd:9,uses:['Kochen','Tinkturen','Medizin'],desc:'Überall. Blüten im Juni, Beeren ab August. Rohe Beeren leicht giftig!',recipes:[{title:'Holunderblüten-Sirup',desc:'20 Dolden, 1,5 kg Zucker, 1,5L Wasser, 3 Zitronen – 3 Tage ziehen, abseihen, aufkochen, abfüllen.'},{title:'Holunder-Saft (Suco)',desc:'Beeren mit wenig Wasser köcheln, durch Tuch pressen, mit Zucker und Gewürzen einkochen.'}]},
+  {name:'Apfel (Wildapfel)',latin:'Malus sylvestris',emoji:'🍎',category:'Obst',stages:['Altpflanze'],monStart:7,monEnd:10,uses:['Kochen'],desc:'Waldränder. Früchte oft sauer aber aromatisch. Gut für Most und Essig.',recipes:[{title:'Apfelmost',desc:'Äpfel waschen, reiben/pressen, Saft mit Hefenährstoffen vergären lassen (4–6 Wochen).'},{title:'Apfelessig',desc:'Apfelmost weiter vergären bis zum Essig – 2–3 Monate bei Raumtemperatur.'}]},
+  {name:'Birne (Wildbirne)',latin:'Pyrus pyraster',emoji:'🍐',category:'Obst',stages:['Altpflanze'],monStart:8,monEnd:10,uses:['Kochen'],desc:'Seltener als Wildapfel. Sehr hartes Holz. Früchte erst nach Frost weich.',recipes:[{title:'Birnen-Chutney',desc:'1 kg Birnen, 200g Zwiebeln, 150g Zucker, 100ml Apfelessig, Gewürze – 30 Min. kochen.'}]},
+  {name:'Kornelkirsche',latin:'Cornus mas',emoji:'🔴',category:'Obst',stages:['Altpflanze'],monStart:8,monEnd:9,uses:['Kochen','Medizin'],desc:'Früh blühender Strauch. Sehr saure Früchte reich an Vitamin C.',recipes:[{title:'Kornelkirsch-Marmelade',desc:'1 kg Früchte entkernen, mit 500g Zucker einkochen, abschmecken.'},{title:'Kornelkirsch-Likör',desc:'500g Früchte, 400g Zucker, 1L Korn, 4 Wochen ziehen lassen.'}]},
+  {name:'Speierling',latin:'Sorbus domestica',emoji:'🍎',category:'Obst',stages:['Altpflanze'],monStart:9,monEnd:11,uses:['Kochen'],desc:'Seltener Baum. Früchte nach Frost genießbar. Für Most sehr geschätzt.',recipes:[{title:'Speierling-Most',desc:'Früchte nach dem Frost ernten und zu Most verarbeiten. Klärt Apfelmost natürlich.'}]},
+  // PILZE
+  {name:'Pfifferling',latin:'Cantharellus cibarius',emoji:'🍄',category:'Pilze',stages:['Altpflanze'],monStart:5,monEnd:9,uses:['Kochen'],desc:'Mischwald unter Fichte und Buche. Unverwechselbar mit falschen Gabeling.',recipes:[{title:'Pfifferling-Rahm-Sauce',desc:'Pfifferlinge putzen, in Butter anbraten, mit Sahne ablöschen, mit Thymian würzen. Zu Pasta oder Knödel.'},{title:'Eingelegte Pfifferlinge',desc:'Klein gekochte Pfifferlinge in Essig-Wasser-Sud mit Lorbeer und Pfefferkörnern einlegen.'}]},
+  {name:'Steinpilz',latin:'Boletus edulis',emoji:'🍄',category:'Pilze',stages:['Altpflanze'],monStart:6,monEnd:10,uses:['Kochen'],desc:'König der Pilze. Unter Fichten, Kiefern, Buchen. Schwamm unter dem Hut prüfen.',recipes:[{title:'Steinpilz-Risotto',desc:'Arborio-Reis, getrocknete Steinpilze einweichen, mit Brühe und Parmesan langsam garen.'},{title:'Getrocknete Steinpilze',desc:'In dünne Scheiben schneiden und bei 40°C im Dörrgerät oder Backofen trocknen.'}]},
+  {name:'Schmarotzer-Röhrling',latin:'Xerocomus parasiticus',emoji:'🍄',category:'Pilze',stages:['Altpflanze'],monStart:7,monEnd:9,uses:['Kochen'],desc:'Wächst auf dem Kartoffelbovist. Selten aber charakteristisch.',recipes:[{title:'Röhrlings-Pfanne',desc:'In Olivenöl anbraten, Knoblauch, Petersilie, Salz, Pfeffer.'}]},
+  {name:'Bärlauch',latin:'Allium ursinum',emoji:'🧄',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:4,uses:['Kochen','Salat'],desc:'Buchenwälder, feuchte Standorte. Frühjahrsbote! ACHTUNG: Nicht mit Maiglöckchen verwechseln – immer Knoblauchgeruch prüfen!',recipes:[{title:'Bärlauch-Pesto',desc:'100g Blätter, 50g Parmesan, 50g Pinienkerne, 150ml Olivenöl, Salz, Pfeffer – alles mixen.'},{title:'Bärlauch-Butter',desc:'100g weiche Butter mit 3 EL fein gehackten Bärlauch-Blättern vermengen – auf frischem Brot.'}]},
+  {name:'Brennnessel',latin:'Urtica dioica',emoji:'🌿',category:'Wildpflanzen',stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:8,uses:['Tee','Salat','Medizin'],desc:'Stickstoffreiche Böden, Weg- und Waldränder. Junge Triebe im Frühling ernten.',recipes:[{title:'Brennnessel-Tee',desc:'2 EL frische Blätter mit 250ml heißem Wasser übergießen, 10 Min. ziehen lassen.'},{title:'Brennnessel-Suppe',desc:'200g junge Triebe, 1 Zwiebel, 500ml Brühe – Zwiebel anschwitzen, Brennnesseln zugeben, pürieren.'}]},
+  {name:'Schafgarbe',latin:'Achillea millefolium',emoji:'🌼',category:'Heilpflanzen',stages:['Halbwuchs','Altpflanze'],monStart:5,monEnd:9,uses:['Tee','Medizin'],desc:'Sonnige Magerwiesen. Blutstillend, krampflösend.',recipes:[{title:'Schafgarben-Tee',desc:'1 EL Blüten und Blätter, 250ml heißes Wasser, 10 Min. ziehen. Bei Menstruationsbeschwerden.'},{title:'Wundtinktur',desc:'50g frische Blüten in 250ml Korn, 4 Wochen stehen lassen, abseihen.'}]},
+  // BÄUME
+  {name:'Linde',latin:'Tilia cordata',emoji:'🌳',category:'Bäume',stages:['Altpflanze'],monStart:5,monEnd:7,uses:['Tee','Medizin'],desc:'Blüten im Juni/Juli ernten (mit Deckblatt). Beruhigend, schweißtreibend.',recipes:[{title:'Lindenblüten-Tee',desc:'2 EL frische oder getrocknete Blüten, 250ml heißes Wasser, 10 Min. ziehen. Erkältungs-Tee.'},{title:'Lindenblüten-Sirup',desc:'20 Dolden, 1 kg Zucker, 1L Wasser – 2 Tage ziehen, abseihen, aufkochen, in Flaschen.'}]},
+  {name:'Birke',latin:'Betula pendula',emoji:'🌳',category:'Bäume',stages:['Jungpflanze','Altpflanze'],monStart:2,monEnd:4,uses:['Tee','Medizin'],desc:'Junge Blätter im Frühjahr. Birkensaft im März anzapfen. Harntreibend.',recipes:[{title:'Birkensaft',desc:'Im März Baum schräg anschneiden (nicht zu tief), Schlauch, Flasche. Frisch trinken oder vergären.'},{title:'Birkenblatt-Tee',desc:'Junge Blätter, 2 EL auf 250ml Wasser, 10 Min. – entwässernd und entschlackend.'}]},
+  {name:'Eiche',latin:'Quercus robur',emoji:'🌳',category:'Bäume',stages:['Altpflanze'],monStart:8,monEnd:10,uses:['Medizin'],desc:'Eichenrinde sehr gerbstoffreich. Adstringierend, entzündungshemmend.',recipes:[{title:'Eichenrinden-Tee',desc:'1 TL Rinde in 250ml Wasser 10 Min. köcheln, abseihen. Zum Gurgeln bei Halsschmerzen oder Kompresse.'},{title:'Eichel-Kaffee',desc:'Eicheln schälen, rösten, mahlen – koffeinfreier Kaffeeersatz mit nussigem Aroma.'}]},
+  {name:'Walnuss',latin:'Juglans regia',emoji:'🌳',category:'Bäume',stages:['Altpflanze'],monStart:6,monEnd:10,uses:['Kochen','Medizin'],desc:'Grüne Schale für Tinkturen (Hände verfärben!). Reife Nüsse ab September.',recipes:[{title:'Grüner Walnuss-Likör',desc:'20 grüne Nüsse (Juni) halbieren, mit 1L Korn und 500g Zucker 6 Monate ziehen lassen.'},{title:'Walnuss-Pesto',desc:'50g Walnüsse, 50g Parmesan, Basilikum, Olivenöl, Knoblauch, Salz.'}]},
+  {name:'Fichte',latin:'Picea abies',emoji:'🌲',category:'Bäume',stages:['Jungpflanze','Altpflanze'],monStart:3,monEnd:5,uses:['Kochen','Medizin'],desc:'Junge hellgrüne Triebspitzen im Frühling ernten. Sehr vitaminreich.',recipes:[{title:'Fichten-Sirup',desc:'200g junge Triebe, 500ml Wasser, 500g Zucker – 24h ziehen, aufkochen, abseihen, abfüllen.'},{title:'Fichtennadel-Tee',desc:'2 EL frische Nadeln, 250ml heißes Wasser, 10 Min. Ziehen. Reich an Vitamin C.'}]},
+];
+
+function openDBModal(){
+  renderDB();
+  document.getElementById('dbOverlay').classList.add('open');
+}
+
+function renderDB(){
+  const q=(document.getElementById('dbSearch')?.value||'').toLowerCase();
+  const cat=(document.getElementById('dbCatFilter')?.value||'');
+  let list=PLANT_DB.filter(p=>{
+    const mq=!q||p.name.toLowerCase().includes(q)||(p.latin||'').toLowerCase().includes(q);
+    const mc=!cat||p.category===cat;
+    return mq&&mc;
+  });
+  // Remove already added plants
+  const added=new Set(plants.map(p=>p.name.toLowerCase()));
+  const grid=document.getElementById('dbGrid');
+  if(!list.length){grid.innerHTML='<p style="color:var(--text-muted);padding:20px;font-size:.9rem;">Keine Pflanzen gefunden</p>';return;}
+  grid.innerHTML=list.map(p=>{
+    const cc=catColor(p.category||'');
+    const isAdded=added.has(p.name.toLowerCase());
+    return `<div class="db-card ${isAdded?'':''}${isAdded?'" style="opacity:.5;cursor:default;"':'"'} 
+      onclick="${isAdded?'':'addFromDB(\''+p.name.replace(/'/g,"\\'")+'\')'}" title="${isAdded?'Bereits eingetragen':'Hinzufügen'}">
+      <div class="db-emoji">${p.emoji||'🌿'}</div>
+      <div class="db-name">${p.name}${isAdded?' ✓':''}</div>
+      <div class="db-latin">${p.latin||''}</div>
+      <span class="db-cat" style="background:${cc}">${p.category||''}</span>
+    </div>`;
+  }).join('');
+}
+
+function addFromDB(name){
+  const template=PLANT_DB.find(p=>p.name===name); if(!template)return;
+  // Check not duplicate
+  if(plants.find(p=>p.name.toLowerCase()===name.toLowerCase())){
+    notify('⚠️ Diese Pflanze ist bereits eingetragen');return;
+  }
+  const newPlant={
+    ...template,
+    id:Date.now(),
+    locations:[],
+    photo:null,
+  };
+  plants.push(newPlant);
+  save();
+  renderDB(); // refresh to mark as added
+  renderPlants();
+  notify(`✅ ${name} aus Datenbank hinzugefügt!`);
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+load();
+updateCatSelects();
+renderPlants();
+</script>
+</body>
+</html>
