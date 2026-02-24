@@ -1,0 +1,43 @@
+{
+  "name": "Pflanzenfinder – Mein Kräuterbuch",
+  "short_name": "Pflanzenfinder",
+  "description": "Fundorte, Erntezeiten, Rezepte und Standortkarte für Wildpflanzen und Kräuter",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f4efe4",
+  "theme_color": "#2d5016",
+  "orientation": "portrait-primary",
+  "lang": "de",
+  "categories": ["lifestyle", "health", "food"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Neue Pflanze",
+      "short_name": "Neu",
+      "description": "Neue Pflanze hinzufügen",
+      "url": "/index.html#neu",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Karte",
+      "short_name": "Karte",
+      "description": "Fundorte auf der Karte",
+      "url": "/index.html#karte",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
